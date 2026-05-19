@@ -1,0 +1,20 @@
+{
+  "name": "Orbit Capture",
+  "short_name": "Orbit",
+  "description": "Pure browser screen recorder — WebM & GIF with timeline trimming. No extensions, no uploads.",
+  "start_url": "/orbit-capture/",
+  "scope": "/orbit-capture/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#060710",
+  "theme_color": "#060710",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["utilities", "productivity"]
+}

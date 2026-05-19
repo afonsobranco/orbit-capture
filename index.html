@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Pure browser screen recorder. No extensions. No uploads. WebM and GIF export with timeline trimming.">
+<meta property="og:title" content="Orbit Capture">
+<meta property="og:description" content="Pure browser screen recorder — WebM & GIF with trimming. No extensions, no uploads.">
+<meta property="og:url" content="https://afonsobranco.github.io/orbit-capture/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Orbit Capture">
+<meta name="twitter:description" content="Pure browser screen recorder — WebM & GIF with trimming. No extensions, no uploads.">
+<meta name="theme-color" content="#060710" id="meta-theme">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23060710'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23E53E3E' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%23E53E3E'/%3E%3C/svg%3E">
+<title>Orbit Capture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+/* ── DARK (DEFAULT) ── */
+:root{
+  --crimson:#E53E3E;
+  --crimson-glow:rgba(229,62,62,0.45);
+  --bg:#060710;
+  --surface:rgba(7,8,18,0.92);
+  --surface-2:rgba(8,9,20,0.82);
+  --glass:rgba(255,255,255,0.035);
+  --glass-b:rgba(255,255,255,0.07);
+  --glass-b2:rgba(255,255,255,0.13);
+  --text:#E4E6F0;
+  --text-dim:#484E6A;
+  --text-mid:#8A90AA;
+  --blue:#3B7FFF;
+  --green:#22C55E;
+  --amber:#F59E0B;
+  --font-ui:'Syne','Helvetica Neue',sans-serif;
+  --font-mono:'JetBrains Mono','SF Mono',monospace;
+  --idle-bg:rgba(6,7,16,0.93);
+  --idle-bd:rgba(255,255,255,0.08);
+  --cd-bg:rgba(0,0,0,0.65);
+}
+
+/* ── LIGHT OVERRIDES ── */
+[data-theme="light"]{
+  --bg:#ECF0FA;
+  --surface:rgba(248,250,255,0.95);
+  --surface-2:rgba(243,246,255,0.9);
+  --glass:rgba(255,255,255,0.6);
+  --glass-b:rgba(0,0,0,0.09);
+  --glass-b2:rgba(0,0,0,0.17);
+  --text:#08091A;
+  --text-dim:#9298B8;
+  --text-mid:#454B6A;
+  --crimson-glow:rgba(229,62,62,0.28);
+  --idle-bg:rgba(236,240,250,0.94);
+  --idle-bd:rgba(0,0,0,0.08);
+  --cd-bg:rgba(236,240,250,0.75);
+}
+[data-theme="light"] #sf{opacity:0;}
+[data-theme="light"] .deco{opacity:.05;filter:invert(1);}
+[data-theme="light"] .fmt-toggle{background:rgba(0,0,0,.04);}
+[data-theme="light"] .fmt-btn.active{background:rgba(0,0,0,.07);}
+[data-theme="light"] .act-btn:not(:disabled):hover{background:rgba(0,0,0,.06);}
+[data-theme="light"] .rec-badge{background:rgba(255,255,255,.75);}
+
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font-ui);transition:background .3s;}
+
+/* ── STARFIELD ── */
+#sf{position:fixed;inset:0;z-index:0;pointer-events:none;transition:opacity .4s;}
+
+/* ── SCENE ── */
+.scene{position:fixed;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;padding:14px 22px 0;}
+
+/* ── HEADER ── */
+.hdr{width:100%;max-width:1160px;display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.logo-orbit{position:relative;width:27px;height:27px;border:1.5px solid var(--crimson);border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.logo-orbit::before{content:'';position:absolute;width:33px;height:33px;border-radius:50%;border:1px solid rgba(229,62,62,.2);animation:orbit-ring 3s ease-in-out infinite;}
+.logo-orbit::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--crimson);box-shadow:0 0 8px var(--crimson-glow);}
+@keyframes orbit-ring{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.7;transform:scale(1.12)}}
+.logo-name{display:flex;flex-direction:column;gap:1px;}
+.logo-title{font-size:13px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--text);line-height:1;}
+.logo-sub{font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase;}
+
+#compat-warn{display:none;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;color:var(--amber);padding:4px 10px;border:1px solid rgba(245,158,11,.25);border-radius:6px;background:rgba(245,158,11,.06);}
+.hdr-actions{display:flex;align-items:center;gap:7px;margin-left:auto;}
+.res-badge{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;color:var(--text-mid);padding:4px 10px;border:1px solid var(--glass-b);border-radius:100px;background:var(--glass);display:none;}
+
+.icon-btn{width:30px;height:30px;border-radius:50%;border:1px solid var(--glass-b);background:var(--glass);color:var(--text-mid);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-family:var(--font-mono);font-size:13px;font-weight:600;line-height:1;flex-shrink:0;}
+.icon-btn:hover{background:var(--glass-b);color:var(--text);border-color:var(--glass-b2);}
+.icon-btn:active{transform:scale(.92);}
+.icon-btn svg{pointer-events:none;}
+
+.status-chip{display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:100px;background:var(--glass);border:1px solid var(--glass-b);font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;color:var(--text-mid);user-select:none;flex-shrink:0;}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--text-dim);transition:background .3s,box-shadow .3s;flex-shrink:0;}
+.s-dot.ready{background:var(--green);box-shadow:0 0 6px var(--green);}
+.s-dot.rec{background:var(--crimson);box-shadow:0 0 8px var(--crimson-glow);animation:blink 1s infinite;}
+.s-dot.proc{background:var(--blue);box-shadow:0 0 6px var(--blue);animation:blink .7s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ── PREVIEW ── */
+.preview-wrap{position:relative;width:100%;max-width:1160px;flex:1 1 0;min-height:0;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+#preview{max-width:100%;max-height:100%;width:auto;height:auto;display:block;border-radius:10px;border:1px solid var(--glass-b);background:#000;box-shadow:0 0 80px rgba(0,0,0,.45);}
+.idle-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-radius:10px;background:var(--idle-bg);border:1px dashed var(--idle-bd);transition:opacity .35s;pointer-events:none;}
+.idle-overlay.gone{opacity:0;}
+.idle-icon{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--glass-b2);display:flex;align-items:center;justify-content:center;}
+.idle-hint{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;color:var(--text-dim);text-transform:uppercase;}
+.corner{position:absolute;width:15px;height:15px;}
+.corner.tl{top:7px;left:7px;border-top:1.5px solid var(--glass-b2);border-left:1.5px solid var(--glass-b2);border-radius:2px 0 0 0;}
+.corner.tr{top:7px;right:7px;border-top:1.5px solid var(--glass-b2);border-right:1.5px solid var(--glass-b2);border-radius:0 2px 0 0;}
+.corner.bl{bottom:7px;left:7px;border-bottom:1.5px solid var(--glass-b2);border-left:1.5px solid var(--glass-b2);border-radius:0 0 0 2px;}
+.corner.br{bottom:7px;right:7px;border-bottom:1.5px solid var(--glass-b2);border-right:1.5px solid var(--glass-b2);border-radius:0 0 2px 0;}
+
+/* REC badge */
+.rec-badge{position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:4px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);border:1px solid rgba(229,62,62,.3);font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;color:var(--crimson);opacity:0;transition:opacity .3s;pointer-events:none;}
+.rec-badge.on{opacity:1;}
+.rec-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--crimson);animation:blink 1s infinite;}
+
+/* ── COUNTDOWN ── */
+.cd-ov{position:absolute;inset:0;border-radius:10px;background:var(--cd-bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:10;}
+.cd-ring{width:100px;height:100px;border-radius:50%;border:2px solid rgba(229,62,62,.3);position:absolute;animation:cd-ring-pulse 1s ease-in-out infinite;}
+@keyframes cd-ring-pulse{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.1);opacity:.6}}
+.cd-num{font-family:var(--font-ui);font-size:68px;font-weight:800;color:var(--crimson);line-height:1;position:relative;z-index:1;text-shadow:0 0 40px var(--crimson-glow);}
+.cd-hint{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;color:var(--text-mid);text-transform:uppercase;}
+@keyframes cd-pop{0%{opacity:0;transform:scale(1.5)}15%{opacity:1;transform:scale(1)}82%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.65)}}
+
+/* ── TIMELINE ── */
+.timeline{width:100%;max-width:1160px;flex-shrink:0;background:var(--surface-2);backdrop-filter:blur(20px);border:1px solid var(--glass-b);border-radius:12px;padding:11px 16px;margin-bottom:9px;opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s;pointer-events:none;}
+.timeline.on{opacity:1;transform:translateY(0);pointer-events:all;}
+.tl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;gap:8px;flex-wrap:wrap;}
+.tl-left{display:flex;align-items:center;gap:12px;}
+.tl-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase;}
+.tl-times{display:flex;gap:10px;font-family:var(--font-mono);font-size:11px;}
+.tl-in{color:var(--blue);}
+.tl-out{color:var(--crimson);}
+.tl-dur{color:var(--text-dim);}
+.tl-est{font-family:var(--font-mono);font-size:10px;color:var(--text-mid);white-space:nowrap;}
+.tl-est-lbl{color:var(--text-dim);}
+
+.gif-warn{display:none;margin-bottom:7px;padding:5px 12px;border-radius:6px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.22);font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;color:var(--amber);}
+.thumb-strip{display:flex;gap:2px;border-radius:4px;overflow:hidden;height:30px;margin-bottom:7px;cursor:pointer;}
+.thumb-frame{flex:1;background:var(--glass);border-radius:2px;overflow:hidden;}
+.thumb-frame canvas{width:100%;height:100%;display:block;object-fit:cover;}
+.range-wrap{position:relative;height:22px;display:flex;align-items:center;}
+.range-bg{position:absolute;left:0;right:0;height:3px;background:var(--glass-b);border-radius:2px;}
+.range-fill{position:absolute;height:3px;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--crimson));}
+.range-wrap input[type=range]{position:absolute;width:100%;appearance:none;-webkit-appearance:none;background:transparent;pointer-events:none;height:3px;outline:none;}
+.range-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;cursor:ew-resize;pointer-events:all;position:relative;z-index:2;transition:transform .1s;}
+.range-wrap input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.range-wrap input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;cursor:ew-resize;pointer-events:all;border:none;}
+#r-start::-webkit-slider-thumb{background:var(--blue);box-shadow:0 0 6px rgba(59,127,255,.5);}
+#r-end::-webkit-slider-thumb{background:var(--crimson);box-shadow:0 0 6px var(--crimson-glow);}
+#r-start::-moz-range-thumb{background:var(--blue);}
+#r-end::-moz-range-thumb{background:var(--crimson);}
+
+/* ── CONTROLLER ── */
+.ctrl{width:100%;max-width:1160px;flex-shrink:0;background:var(--surface);backdrop-filter:blur(40px) saturate(1.6);-webkit-backdrop-filter:blur(40px) saturate(1.6);border:1px solid var(--glass-b);border-bottom:none;border-radius:20px 20px 0 0;padding:18px 30px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px;position:relative;overflow:hidden;}
+.ctrl-aperture{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:200px;height:200px;border-radius:50%;background:conic-gradient(rgba(229,62,62,.04) 0deg 55deg,transparent 55deg 70deg,rgba(229,62,62,.04) 70deg 125deg,transparent 125deg 140deg,rgba(229,62,62,.04) 140deg 195deg,transparent 195deg 210deg,rgba(229,62,62,.04) 210deg 265deg,transparent 265deg 280deg,rgba(229,62,62,.04) 280deg 335deg,transparent 335deg 350deg,rgba(229,62,62,.04) 350deg 360deg);pointer-events:none;}
+.ctrl-glow{position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--crimson),transparent);opacity:0;transition:opacity .5s;}
+.ctrl.recording .ctrl-glow{opacity:1;}
+.ctrl.recording{border-color:rgba(229,62,62,.2);}
+.enc-bar{position:absolute;bottom:0;left:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--crimson));border-radius:0 2px 2px 0;width:0%;transition:width .12s;}
+
+/* LEFT */
+.ctrl-left{display:flex;flex-direction:column;gap:9px;min-width:155px;}
+.ctrl-sec-lbl{font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase;}
+.fmt-toggle{display:flex;gap:2px;background:rgba(255,255,255,.04);border:1px solid var(--glass-b);border-radius:8px;padding:3px;}
+.fmt-btn{flex:1;padding:6px 10px;border-radius:6px;background:transparent;border:none;color:var(--text-dim);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;cursor:pointer;transition:all .2s;}
+.fmt-btn.active{background:rgba(255,255,255,.08);color:var(--text);border:1px solid var(--glass-b2);}
+.gif-opts{display:none;flex-direction:column;gap:5px;}
+.gif-opts.on{display:flex;}
+.opt-row{display:flex;align-items:center;gap:8px;}
+.opt-lbl{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);letter-spacing:.06em;min-width:42px;}
+.opt-sel{background:var(--glass);border:1px solid var(--glass-b);border-radius:6px;color:var(--text-mid);font-family:var(--font-mono);font-size:10px;padding:4px 8px;cursor:pointer;outline:none;}
+
+/* Audio toggle */
+.audio-row{display:none;flex-direction:column;gap:5px;}
+.audio-row.on{display:flex;}
+.audio-inner{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.toggle-sw{position:relative;display:inline-block;width:34px;height:18px;flex-shrink:0;}
+.toggle-sw input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-track{position:absolute;inset:0;border-radius:18px;background:var(--glass-b);border:1px solid var(--glass-b2);cursor:pointer;transition:background .2s,border-color .2s;}
+.toggle-sw input:checked+.toggle-track{background:var(--crimson);border-color:transparent;}
+.toggle-track::before{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
+.toggle-sw input:checked+.toggle-track::before{transform:translateX(16px);}
+
+/* CENTER */
+.ctrl-center{display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;z-index:2;}
+.rec-btn-wrap{position:relative;}
+.ring{position:absolute;border-radius:50%;border:1px solid rgba(229,62,62,.15);pointer-events:none;}
+.ring-1{inset:-12px;animation:ring-pulse 2.5s ease-in-out infinite;}
+.ring-2{inset:-22px;animation:ring-pulse 2.5s ease-in-out .6s infinite;}
+.ring-3{inset:-34px;animation:ring-pulse 2.5s ease-in-out 1.2s infinite;opacity:0;}
+@keyframes ring-pulse{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:.4;transform:scale(1.02)}}
+#rec-btn{position:relative;z-index:1;width:78px;height:78px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#FF5252 0%,#B91C1C 70%);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 0 var(--crimson-glow),0 6px 32px rgba(229,62,62,.4),inset 0 1px 0 rgba(255,255,255,.18),inset 0 -2px 4px rgba(0,0,0,.3);transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .3s;-webkit-tap-highlight-color:transparent;}
+#rec-btn:hover:not(:disabled){transform:scale(1.06);box-shadow:0 0 0 10px rgba(229,62,62,.07),0 6px 44px rgba(229,62,62,.55),inset 0 1px 0 rgba(255,255,255,.18),inset 0 -2px 4px rgba(0,0,0,.3);}
+#rec-btn:active:not(:disabled){transform:scale(.94);}
+#rec-btn:disabled{opacity:.55;cursor:not-allowed;}
+#rec-btn.recording{animation:btn-throb 1.6s ease-in-out infinite;}
+@keyframes btn-throb{0%,100%{box-shadow:0 0 0 0 rgba(229,62,62,.5),0 6px 32px rgba(229,62,62,.4),inset 0 1px 0 rgba(255,255,255,.18)}50%{box-shadow:0 0 0 20px rgba(229,62,62,0),0 6px 50px rgba(229,62,62,.7),inset 0 1px 0 rgba(255,255,255,.18)}}
+.rec-btn-core{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.22);transition:border-radius .22s cubic-bezier(.34,1.56,.64,1),width .22s,height .22s;}
+#rec-btn.recording .rec-btn-core{border-radius:6px;width:20px;height:20px;}
+.rec-btn-lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;color:var(--text-dim);text-transform:uppercase;}
+
+/* RIGHT */
+.ctrl-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;min-width:155px;}
+.timer{font-family:var(--font-mono);font-size:30px;font-weight:300;letter-spacing:.04em;color:var(--text);line-height:1;}
+.timer-ms{font-size:17px;color:var(--text-dim);font-weight:300;}
+.action-row{display:flex;gap:7px;}
+.act-btn{padding:7px 16px;border-radius:8px;border:1px solid var(--glass-b);background:var(--glass);color:var(--text-mid);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.act-btn:not(:disabled):hover{background:rgba(255,255,255,.07);color:var(--text);border-color:var(--glass-b2);}
+.act-btn:active:not(:disabled){transform:scale(.97);}
+.act-btn:disabled{opacity:.3;cursor:not-allowed;}
+.act-btn.export{background:rgba(59,127,255,.12);color:var(--blue);border-color:rgba(59,127,255,.28);}
+.act-btn.export:not(:disabled):hover{background:rgba(59,127,255,.22);border-color:rgba(59,127,255,.45);}
+.act-btn.warn-export{background:rgba(245,158,11,.1);color:var(--amber);border-color:rgba(245,158,11,.28);}
+.act-btn.warn-export:not(:disabled):hover{background:rgba(245,158,11,.2);border-color:rgba(245,158,11,.45);}
+
+.deco{position:fixed;pointer-events:none;z-index:0;opacity:.05;}
+
+/* ── HELP MODAL ── */
+.help-bd{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.65);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+[data-theme="light"] .help-bd{background:rgba(100,110,150,.4);}
+.help-bd.on{opacity:1;pointer-events:all;}
+.help-panel{width:520px;max-width:calc(100vw - 40px);max-height:calc(100vh - 80px);overflow-y:auto;background:var(--surface);border:1px solid var(--glass-b2);border-radius:16px;padding:30px;position:relative;transform:translateY(14px);transition:transform .28s cubic-bezier(.34,1.2,.64,1);}
+.help-bd.on .help-panel{transform:translateY(0);}
+.help-title{font-size:17px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text);margin-bottom:3px;}
+.help-sub{font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase;margin-bottom:22px;}
+.help-steps{display:flex;flex-direction:column;gap:14px;}
+.help-step{display:flex;gap:12px;align-items:flex-start;}
+.help-num{width:21px;height:21px;border-radius:50%;border:1px solid rgba(229,62,62,.35);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;color:var(--crimson);flex-shrink:0;margin-top:2px;}
+.help-step-body{flex:1;}
+.help-step-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.04em;margin-bottom:3px;}
+.help-step-desc{font-family:var(--font-mono);font-size:11px;color:var(--text-mid);line-height:1.65;letter-spacing:.03em;}
+.help-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;border:1px solid var(--glass-b);background:var(--glass);color:var(--text-mid);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;transition:all .2s;}
+.help-close:hover{background:var(--glass-b);color:var(--text);}
+.help-divider{border:none;border-top:1px solid var(--glass-b);margin:18px 0;}
+.help-footer{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);letter-spacing:.05em;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:145px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface);border:1px solid var(--glass-b2);border-radius:8px;padding:9px 18px;z-index:100;font-family:var(--font-mono);font-size:11px;letter-spacing:.07em;color:var(--text-mid);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<canvas id="sf"></canvas>
+
+<svg class="deco" style="top:16px;right:115px;width:32px;height:32px" viewBox="0 0 36 36" aria-hidden="true">
+  <line x1="18" y1="0" x2="18" y2="13" stroke="#fff" stroke-width="1"/>
+  <line x1="18" y1="23" x2="18" y2="36" stroke="#fff" stroke-width="1"/>
+  <line x1="0" y1="18" x2="13" y2="18" stroke="#fff" stroke-width="1"/>
+  <line x1="23" y1="18" x2="36" y2="18" stroke="#fff" stroke-width="1"/>
+  <circle cx="18" cy="18" r="3" fill="none" stroke="#fff" stroke-width="1"/>
+</svg>
+<svg class="deco" style="bottom:185px;left:42px;width:22px;height:22px" viewBox="0 0 36 36" aria-hidden="true">
+  <line x1="18" y1="0" x2="18" y2="13" stroke="#fff" stroke-width="1"/>
+  <line x1="18" y1="23" x2="18" y2="36" stroke="#fff" stroke-width="1"/>
+  <line x1="0" y1="18" x2="13" y2="18" stroke="#fff" stroke-width="1"/>
+  <line x1="23" y1="18" x2="36" y2="18" stroke="#fff" stroke-width="1"/>
+  <circle cx="18" cy="18" r="3" fill="none" stroke="#fff" stroke-width="1"/>
+</svg>
+
+<div class="scene">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="logo">
+      <div class="logo-orbit"></div>
+      <div class="logo-name">
+        <span class="logo-title">Orbit Capture</span>
+        <span class="logo-sub">Screen · WebM · GIF</span>
+      </div>
+    </div>
+    <span id="compat-warn">⚠ Use Chrome or Firefox for full support</span>
+    <div class="hdr-actions">
+      <span class="res-badge" id="res-badge"></span>
+      <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light / dark">
+        <svg id="theme-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+      <button class="icon-btn" onclick="toggleHelp()" aria-label="Show instructions" title="Instructions">?</button>
+      <div class="status-chip">
+        <div class="s-dot" id="s-dot"></div>
+        <span id="s-text">Initialising</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- PREVIEW -->
+  <div class="preview-wrap">
+    <canvas id="preview" width="1280" height="720"></canvas>
+
+    <div class="idle-overlay" id="idle-ov">
+      <div class="idle-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-width="1.5" stroke-linecap="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8M12 17v4"/>
+        </svg>
+      </div>
+      <span class="idle-hint">Press record to capture your screen</span>
+    </div>
+
+    <!-- Countdown -->
+    <div class="cd-ov" id="cd-ov">
+      <div class="cd-ring"></div>
+      <div class="cd-num" id="cd-num">3</div>
+      <div class="cd-hint">Get your screen ready</div>
+    </div>
+
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+
+    <div class="rec-badge" id="rec-badge">
+      <div class="rec-badge-dot"></div>
+      <span>REC</span>
+      <span id="rec-clock" style="margin-left:6px;color:rgba(255,255,255,.5)">00:00</span>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="timeline" id="timeline">
+    <div class="tl-header">
+      <div class="tl-left">
+        <span class="tl-label">Timeline · Trim</span>
+        <div class="tl-times">
+          <span class="tl-in">IN <span id="t-in">0.00s</span></span>
+          <span class="tl-dur">·</span>
+          <span class="tl-dur"><span id="t-clip">0.00s</span></span>
+          <span class="tl-dur">·</span>
+          <span class="tl-out">OUT <span id="t-out">0.00s</span></span>
+        </div>
+      </div>
+      <span class="tl-est"><span class="tl-est-lbl">Est. </span><span id="t-size">—</span></span>
+    </div>
+    <div class="thumb-strip" id="thumbs"></div>
+    <div class="gif-warn" id="gif-warn">⚠ Clip exceeds 30 s — GIF may be very large</div>
+    <div class="range-wrap">
+      <div class="range-bg"></div>
+      <div class="range-fill" id="r-fill"></div>
+      <input type="range" id="r-start" min="0" max="1000" value="0" step="1">
+      <input type="range" id="r-end"   min="0" max="1000" value="1000" step="1">
+    </div>
+  </div>
+
+  <!-- CONTROLLER -->
+  <div class="ctrl" id="ctrl">
+    <div class="ctrl-aperture"></div>
+    <div class="ctrl-glow"></div>
+
+    <!-- LEFT -->
+    <div class="ctrl-left">
+      <span class="ctrl-sec-lbl">Output Format</span>
+      <div class="fmt-toggle">
+        <button class="fmt-btn active" id="fmt-webm" onclick="setFmt('webm')">WebM</button>
+        <button class="fmt-btn"        id="fmt-gif"  onclick="setFmt('gif')">GIF</button>
+      </div>
+
+      <div class="gif-opts" id="gif-opts">
+        <div class="opt-row">
+          <span class="opt-lbl">FPS</span>
+          <select class="opt-sel" id="g-fps" onchange="onSettingsChange()">
+            <option value="8">8 fps</option>
+            <option value="12" selected>12 fps</option>
+            <option value="15">15 fps</option>
+            <option value="20">20 fps</option>
+          </select>
+        </div>
+        <div class="opt-row">
+          <span class="opt-lbl">Quality</span>
+          <select class="opt-sel" id="g-qual" onchange="savePrefs()">
+            <option value="3">High</option>
+            <option value="8" selected>Medium</option>
+            <option value="18">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="audio-row on" id="audio-row">
+        <span class="ctrl-sec-lbl">System Audio</span>
+        <div class="audio-inner">
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-mid);letter-spacing:.05em;">Capture tab audio</span>
+          <label class="toggle-sw" aria-label="Toggle system audio">
+            <input type="checkbox" id="audio-chk" onchange="savePrefs()">
+            <div class="toggle-track"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="ctrl-center">
+      <div class="rec-btn-wrap">
+        <div class="ring ring-1"></div>
+        <div class="ring ring-2"></div>
+        <div class="ring ring-3" id="ring-3"></div>
+        <button id="rec-btn" onclick="toggleRec()" aria-label="Start or stop recording">
+          <div class="rec-btn-core"></div>
+        </button>
+      </div>
+      <span class="rec-btn-lbl" id="rec-lbl">Record</span>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="ctrl-right">
+      <div class="timer">
+        <span id="tmr">00:00</span><span class="timer-ms">.<span id="tmr-ms">00</span></span>
+      </div>
+      <div class="action-row">
+        <button class="act-btn" id="btn-reset"  onclick="resetAll()"  style="display:none">Reset</button>
+        <button class="act-btn export" id="btn-exp" onclick="doExport()" style="display:none">Export ↓</button>
+      </div>
+    </div>
+
+    <div class="enc-bar" id="enc-bar"></div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="help-bd" id="help-bd" onclick="helpBdClick(event)">
+  <div class="help-panel" role="dialog" aria-modal="true" aria-label="Orbit Capture instructions">
+    <button class="help-close" onclick="toggleHelp()" aria-label="Close">×</button>
+    <h2 class="help-title">How to use</h2>
+    <p class="help-sub">Orbit Capture · Quick Reference</p>
+    <div class="help-steps">
+      <div class="help-step">
+        <div class="help-num">1</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Choose your format</div>
+          <div class="help-step-desc">WebM for GitHub PRs and docs — smaller, sharper, better quality. GIF for maximum compatibility. Audio capture is only available in WebM and must be enabled before recording starts.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-num">2</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Hit record</div>
+          <div class="help-step-desc">Click the crimson button. Your browser will ask which screen, window, or tab to capture. A 3-second countdown gives you time to arrange your view before recording begins.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-num">3</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Stop and trim</div>
+          <div class="help-step-desc">Click again to stop. Drag the blue IN handle and red OUT handle on the timeline to define your clip. Click any thumbnail frame to scrub to that moment. The estimated file size updates live.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-num">4</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Export and download</div>
+          <div class="help-step-desc">Hit Export ↓ to encode and download your clip. GIF clips over 30 s trigger a warning — expect files above 20 MB. WebM exports stream in real time through a canvas re-encode.</div>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-num">5</div>
+        <div class="help-step-body">
+          <div class="help-step-title">Install as a desktop app</div>
+          <div class="help-step-desc">Chrome and Edge show an install prompt (⊕) in the address bar. Click it to run Orbit Capture as a standalone app with no browser chrome, working offline for WebM recordings.</div>
+        </div>
+      </div>
+    </div>
+    <hr class="help-divider">
+    <p class="help-footer">Everything happens locally in your browser. No data is uploaded or stored anywhere.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<video id="sv" style="display:none" autoplay muted playsinline></video>
+<video id="rv" style="display:none" playsinline preload="auto"></video>
+
+<script>
+/* =========================================================
+   STATE
+   ========================================================= */
+let state     = 'idle';  // idle | starting | recording | review | encoding
+let fmt       = 'webm';
+let mStream   = null;
+let mRec      = null;
+let chunks    = [];
+let blob      = null;
+let duration  = 0;
+let tS        = 0;
+let tE        = 1;
+let timerIv   = null;
+let startAt   = null;
+let rafId     = null;
+let mirroring = false;
+let captureW  = 1280;
+let captureH  = 720;
+
+/* DOM */
+const cv       = document.getElementById('preview');
+const cx       = cv.getContext('2d');
+const sv       = document.getElementById('sv');
+const rv       = document.getElementById('rv');
+const idleOv   = document.getElementById('idle-ov');
+const badge    = document.getElementById('rec-badge');
+const timelineEl = document.getElementById('timeline');
+const recBtn   = document.getElementById('rec-btn');
+const ctrl     = document.getElementById('ctrl');
+const ring3    = document.getElementById('ring-3');
+const sDot     = document.getElementById('s-dot');
+const sText    = document.getElementById('s-text');
+const tmr      = document.getElementById('tmr');
+const tmrMs    = document.getElementById('tmr-ms');
+const recClock = document.getElementById('rec-clock');
+const recLbl   = document.getElementById('rec-lbl');
+const btnReset = document.getElementById('btn-reset');
+const btnExp   = document.getElementById('btn-exp');
+const rStart   = document.getElementById('r-start');
+const rEnd     = document.getElementById('r-end');
+const rFill    = document.getElementById('r-fill');
+const encBar   = document.getElementById('enc-bar');
+const thumbs   = document.getElementById('thumbs');
+const tIn      = document.getElementById('t-in');
+const tOut     = document.getElementById('t-out');
+const tClip    = document.getElementById('t-clip');
+const toastEl  = document.getElementById('toast');
+const resBadge = document.getElementById('res-badge');
+const cdOv     = document.getElementById('cd-ov');
+const cdNum    = document.getElementById('cd-num');
+const gifWarn  = document.getElementById('gif-warn');
+const tSize    = document.getElementById('t-size');
+
+/* =========================================================
+   PREFS — localStorage
+   ========================================================= */
+function savePrefs() {
+  try {
+    localStorage.setItem('orbit_fmt',   fmt);
+    localStorage.setItem('orbit_fps',   document.getElementById('g-fps').value);
+    localStorage.setItem('orbit_qual',  document.getElementById('g-qual').value);
+    localStorage.setItem('orbit_audio', document.getElementById('audio-chk').checked);
+    localStorage.setItem('orbit_theme', document.documentElement.dataset.theme);
+  } catch(_) {}
+}
+
+function loadPrefs() {
+  try {
+    const f   = localStorage.getItem('orbit_fmt');
+    const fps  = localStorage.getItem('orbit_fps');
+    const qual = localStorage.getItem('orbit_qual');
+    const aud  = localStorage.getItem('orbit_audio');
+    const thm  = localStorage.getItem('orbit_theme');
+    if (f)    setFmt(f, true);
+    if (fps)  document.getElementById('g-fps').value  = fps;
+    if (qual) document.getElementById('g-qual').value = qual;
+    if (aud)  document.getElementById('audio-chk').checked = aud === 'true';
+    if (thm && thm !== document.documentElement.dataset.theme) applyTheme(thm, true);
+  } catch(_) {}
+}
+
+/* =========================================================
+   THEME
+   ========================================================= */
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  savePrefs();
+}
+
+function applyTheme(t, silent) {
+  document.documentElement.dataset.theme = t;
+  document.getElementById('meta-theme').content = t === 'dark' ? '#060710' : '#ECF0FA';
+  const ico = document.getElementById('theme-ico');
+  if (t === 'light') {
+    // show moon (click to go dark)
+    ico.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  } else {
+    // show sun (click to go light)
+    ico.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  }
+  if (state === 'idle') drawGrid();
+}
+
+/* =========================================================
+   HELP MODAL
+   ========================================================= */
+function toggleHelp() {
+  document.getElementById('help-bd').classList.toggle('on');
+}
+function helpBdClick(e) {
+  if (e.target === document.getElementById('help-bd')) toggleHelp();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('help-bd').classList.remove('on');
+});
+
+/* =========================================================
+   FORMAT
+   ========================================================= */
+function setFmt(f, silent) {
+  fmt = f;
+  document.getElementById('fmt-webm').className = f === 'webm' ? 'fmt-btn active' : 'fmt-btn';
+  document.getElementById('fmt-gif').className  = f === 'gif'  ? 'fmt-btn active' : 'fmt-btn';
+  document.getElementById('gif-opts').classList.toggle('on', f === 'gif');
+  document.getElementById('audio-row').classList.toggle('on', f === 'webm');
+  updateSizeUI();
+  checkGifWarning();
+  if (!silent) savePrefs();
+}
+
+function onSettingsChange() { updateSizeUI(); checkGifWarning(); savePrefs(); }
+
+/* =========================================================
+   INIT
+   ========================================================= */
+function init() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    document.getElementById('compat-warn').style.display = '';
+    setStatus('', 'Not supported');
+  } else {
+    setStatus('ready', 'Ready');
+  }
+  loadPrefs();
+  drawGrid();
+  startStarfield();
+  updateTrimUI();
+  updateSizeUI();
+  rStart.addEventListener('input', onTrim);
+  rEnd.addEventListener('input', onTrim);
+
+  // PWA install prompt
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    toast('Install Orbit Capture — click the ⊕ in your address bar', 5000);
+  });
+
+  // Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+}
+
+function setStatus(cls, txt) {
+  sDot.className = 's-dot ' + cls;
+  sText.textContent = txt;
+}
+
+function drawGrid() {
+  const light = document.documentElement.dataset.theme === 'light';
+  cx.clearRect(0, 0, cv.width, cv.height);
+  cx.fillStyle = light ? '#ECF0FA' : '#050508';
+  cx.fillRect(0, 0, cv.width, cv.height);
+  cx.strokeStyle = light ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.025)';
+  cx.lineWidth = 1;
+  const g = 90;
+  for (let x = 0; x <= cv.width; x += g) { cx.beginPath(); cx.moveTo(x,0); cx.lineTo(x,cv.height); cx.stroke(); }
+  for (let y = 0; y <= cv.height; y += g) { cx.beginPath(); cx.moveTo(0,y); cx.lineTo(cv.width,y); cx.stroke(); }
+  const mx = cv.width/2, my = cv.height/2;
+  cx.strokeStyle = light ? 'rgba(229,62,62,0.14)' : 'rgba(229,62,62,0.08)';
+  cx.beginPath(); cx.arc(mx, my, 40, 0, Math.PI*2); cx.stroke();
+  cx.beginPath(); cx.arc(mx, my, 10, 0, Math.PI*2); cx.stroke();
+  cx.beginPath(); cx.moveTo(mx-62,my); cx.lineTo(mx+62,my); cx.stroke();
+  cx.beginPath(); cx.moveTo(mx,my-62); cx.lineTo(mx,my+62); cx.stroke();
+}
+
+/* =========================================================
+   COUNTDOWN
+   ========================================================= */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function runCountdown() {
+  cdOv.style.display = 'flex';
+  for (let i = 3; i >= 1; i--) {
+    cdNum.textContent = i;
+    cdNum.style.animation = 'none';
+    void cdNum.offsetHeight;
+    cdNum.style.animation = 'cd-pop .95s ease-out forwards';
+    await sleep(1000);
+  }
+  cdOv.style.display = 'none';
+}
+
+/* =========================================================
+   RECORD
+   ========================================================= */
+async function toggleRec() {
+  if (state === 'starting' || state === 'encoding') return;
+  if (state === 'idle')      return startRec();
+  if (state === 'recording') return stopRec();
+}
+
+async function startRec() {
+  try {
+    state = 'starting';
+    recBtn.disabled = true;
+    setStatus('proc', 'Select display…');
+
+    const audioEnabled = document.getElementById('audio-chk').checked && fmt === 'webm';
+    mStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: { ideal:30, max:60 }, cursor:'always' },
+      audio: audioEnabled
+    });
+
+    let cancelled = false;
+    mStream.getVideoTracks()[0].addEventListener('ended', () => {
+      if (state === 'recording') stopRec();
+      else cancelled = true;
+    });
+
+    sv.srcObject = mStream;
+    await sv.play();
+
+    const settings = mStream.getVideoTracks()[0].getSettings();
+    captureW = settings.width  || 1280;
+    captureH = settings.height || 720;
+    cv.width  = captureW;
+    cv.height = captureH;
+
+    resBadge.textContent   = `${captureW} × ${captureH}`;
+    resBadge.style.display = '';
+
+    // Start mirroring — user sees their screen during countdown
+    startMirror();
+    idleOv.classList.add('gone');
+    setStatus('proc', 'Get ready…');
+    await runCountdown();
+
+    // Guard: stream may have ended during countdown
+    if (cancelled || !mStream || !mStream.active) {
+      stopMirror();
+      idleOv.classList.remove('gone');
+      resBadge.style.display = 'none';
+      recBtn.disabled = false;
+      state = 'idle';
+      setStatus('ready', 'Ready');
+      return;
+    }
+
+    const mime = getBestMime();
+    mRec   = new MediaRecorder(mStream, mime ? { mimeType:mime } : {});
+    chunks = [];
+    mRec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mRec.onstop = onRecStop;
+    mRec.start(100);
+
+    startAt = Date.now();
+    state   = 'recording';
+    recBtn.disabled = false;
+
+    recBtn.classList.add('recording');
+    ring3.style.opacity = '1';
+    ctrl.classList.add('recording');
+    badge.classList.add('on');
+    recLbl.textContent = 'Stop';
+    setStatus('rec', `REC · ${captureW}×${captureH}`);
+    startTimer();
+
+  } catch (err) {
+    stopMirror();
+    cdOv.style.display = 'none';
+    idleOv.classList.remove('gone');
+    resBadge.style.display = 'none';
+    recBtn.disabled = false;
+    state = 'idle';
+    setStatus('ready', 'Ready');
+    if (err.name !== 'NotAllowedError') toast('Could not start: ' + err.message, 4000);
+  }
+}
+
+function stopRec() {
+  if (mRec && mRec.state !== 'inactive') mRec.stop();
+  if (mStream) { mStream.getTracks().forEach(t => t.stop()); mStream = null; }
+  stopTimer();
+  stopMirror();
+  recBtn.classList.remove('recording');
+  ring3.style.opacity = '0';
+  ctrl.classList.remove('recording');
+  badge.classList.remove('on');
+  recLbl.textContent = 'Record';
+  setStatus('proc', 'Processing…');
+}
+
+function onRecStop() {
+  blob     = new Blob(chunks, { type:'video/webm' });
+  duration = (Date.now() - startAt) / 1000;
+  state    = 'review';
+  setStatus('ready', 'Ready to export');
+
+  rv.src = URL.createObjectURL(blob);
+  rv.load();
+  rv.addEventListener('loadeddata', () => {
+    buildThumbs();
+    seekAndDraw(rv, 0);
+  }, { once:true });
+
+  setTimerMs(duration * 1000);
+  resetTrim();
+  timelineEl.classList.add('on');
+  btnReset.style.display = '';
+  btnExp.style.display   = '';
+  updateSizeUI();
+  checkGifWarning();
+}
+
+/* =========================================================
+   MIRROR
+   ========================================================= */
+function startMirror() {
+  mirroring = true;
+  ;(function loop() {
+    if (!mirroring) return;
+    if (sv.readyState >= 2) cx.drawImage(sv, 0, 0, cv.width, cv.height);
+    rafId = requestAnimationFrame(loop);
+  })();
+}
+function stopMirror() {
+  mirroring = false;
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+
+/* =========================================================
+   TIMER
+   ========================================================= */
+function startTimer() {
+  timerIv = setInterval(() => {
+    const ms = Date.now() - startAt;
+    setTimerMs(ms);
+    const s = Math.floor(ms / 1000);
+    recClock.textContent = String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+  }, 50);
+}
+function stopTimer() { clearInterval(timerIv); timerIv = null; }
+function setTimerMs(ms) {
+  const s   = Math.floor(ms / 1000);
+  const dec = Math.floor((ms % 1000) / 10);
+  tmr.textContent   = String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+  tmrMs.textContent = String(dec).padStart(2,'0');
+}
+
+/* =========================================================
+   TRIM
+   ========================================================= */
+function resetTrim() {
+  tS = 0; tE = 1;
+  rStart.value = 0; rEnd.value = 1000;
+  updateTrimUI();
+}
+function onTrim(evt) {
+  let s  = parseInt(rStart.value);
+  let en = parseInt(rEnd.value);
+  const MIN_GAP = 10;
+  if (s >= en - MIN_GAP) {
+    if (evt.target === rStart) { s = en - MIN_GAP; rStart.value = s; }
+    else                       { en = s + MIN_GAP; rEnd.value   = en; }
+  }
+  tS = s / 1000; tE = en / 1000;
+  updateTrimUI();
+  updateSizeUI();
+  checkGifWarning();
+  if (state === 'review' && rv.readyState >= 2) seekAndDraw(rv, tS * duration);
+}
+function updateTrimUI() {
+  const s = tS * duration, e = tE * duration;
+  tIn.textContent   = s.toFixed(2) + 's';
+  tOut.textContent  = e.toFixed(2) + 's';
+  tClip.textContent = (e - s).toFixed(2) + 's';
+  rFill.style.left  = (tS * 100).toFixed(1) + '%';
+  rFill.style.width = ((tE - tS) * 100).toFixed(1) + '%';
+}
+
+/* =========================================================
+   SIZE ESTIMATE
+   ========================================================= */
+function updateSizeUI() {
+  if (!duration || state === 'idle') { tSize.textContent = '—'; return; }
+  const clip = (tE - tS) * duration;
+  if (fmt === 'gif') {
+    const fps  = parseInt(document.getElementById('g-fps').value) || 12;
+    const gW   = Math.min(captureW, 960);
+    const gH   = Math.round(captureH * (gW / captureW));
+    const frames = Math.ceil(clip * fps);
+    const mb = (frames * gW * gH) / 5 / 1048576;   // ~5× compression typical
+    tSize.textContent = mb < 1
+      ? `~${Math.round(mb * 1024)} KB (GIF)`
+      : `~${mb.toFixed(1)} MB (GIF)`;
+  } else {
+    const lo = clip * 0.1;    // ~800 Kbps low motion
+    const hi = clip * 0.55;   // ~4.4 Mbps high motion
+    tSize.textContent = `~${lo.toFixed(1)}–${hi.toFixed(1)} MB (WebM)`;
+  }
+}
+
+/* =========================================================
+   GIF WARNING
+   ========================================================= */
+function checkGifWarning() {
+  const clip = (tE - tS) * duration;
+  const warn = fmt === 'gif' && clip > 30;
+  gifWarn.style.display = warn ? '' : 'none';
+  if (warn) {
+    btnExp.classList.remove('export');
+    btnExp.classList.add('warn-export');
+  } else {
+    btnExp.classList.add('export');
+    btnExp.classList.remove('warn-export');
+  }
+}
+
+/* =========================================================
+   THUMBNAILS
+   ========================================================= */
+async function buildThumbs() {
+  thumbs.innerHTML = '';
+  const COUNT = 22;
+  const frames = [];
+  for (let i = 0; i < COUNT; i++) {
+    const wrap = document.createElement('div');
+    wrap.className = 'thumb-frame';
+    const tc = document.createElement('canvas');
+    tc.width = 80; tc.height = 45;
+    wrap.appendChild(tc);
+    thumbs.appendChild(wrap);
+    frames.push({ tc, wrap });
+    const pct = i / COUNT;
+    wrap.addEventListener('click', () => {
+      if (state !== 'review' || rv.readyState < 2) return;
+      const t = pct * duration;
+      rStart.value = Math.min(Math.floor(pct * 1000), parseInt(rEnd.value) - 10);
+      onTrim({ target: rStart });
+      seekAndDraw(rv, t);
+    });
+  }
+  for (let i = 0; i < COUNT; i++) {
+    await seekTo(rv, (i / COUNT) * duration);
+    frames[i].tc.getContext('2d').drawImage(rv, 0, 0, 80, 45);
+  }
+}
+
+/* =========================================================
+   VIDEO SEEK
+   ========================================================= */
+function seekTo(vid, t) {
+  return new Promise(res => {
+    const fn = () => { vid.removeEventListener('seeked', fn); res(); };
+    vid.addEventListener('seeked', fn);
+    vid.currentTime = Math.min(Math.max(t, 0), vid.duration || 0);
+  });
+}
+async function seekAndDraw(vid, t) {
+  await seekTo(vid, t);
+  cx.drawImage(vid, 0, 0, cv.width, cv.height);
+}
+
+/* =========================================================
+   EXPORT
+   ========================================================= */
+async function doExport() {
+  if (state !== 'review') return;
+  state = 'encoding';
+  recBtn.disabled   = true;
+  btnExp.disabled   = true;
+  btnReset.disabled = true;
+  setStatus('proc', 'Encoding…');
+  try {
+    if (fmt === 'webm') await exportWebM();
+    else                await exportGIF();
+    setStatus('ready', 'Export complete ✓');
+    toast('File downloaded successfully.', 3000);
+  } catch(err) {
+    console.error(err);
+    setStatus('ready', 'Export failed');
+    toast('Export error: ' + err.message, 4000);
+  }
+  state = 'review';
+  recBtn.disabled   = false;
+  btnExp.disabled   = false;
+  btnReset.disabled = false;
+  encBar.style.width = '0%';
+  checkGifWarning();
+}
+
+async function exportWebM() {
+  return new Promise((resolve, reject) => {
+    const s = tS * duration, e = tE * duration, clipDur = e - s;
+    const ec = document.createElement('canvas');
+    ec.width = cv.width; ec.height = cv.height;
+    const ectx = ec.getContext('2d');
+    const mime = getBestMime();
+    const rec  = new MediaRecorder(ec.captureStream(30), mime ? { mimeType:mime } : {});
+    const out  = [];
+    rec.ondataavailable = ev => { if (ev.data.size > 0) out.push(ev.data); };
+    rec.onstop = () => { dlBlob(new Blob(out,{type:'video/webm'}), 'orbit-'+ts()+'.webm'); resolve(); };
+    rec.onerror = reject;
+    rec.start(100);
+    seekTo(rv, s).then(() => {
+      rv.play().catch(reject);
+      function frame() {
+        if (rv.currentTime >= e - 0.04) { rv.pause(); rec.stop(); encBar.style.width='100%'; return; }
+        ectx.drawImage(rv, 0, 0, ec.width, ec.height);
+        encBar.style.width = Math.min(((rv.currentTime-s)/clipDur)*100, 99).toFixed(1) + '%';
+        requestAnimationFrame(frame);
+      }
+      rv.addEventListener('playing', frame, { once:true });
+    }).catch(reject);
+  });
+}
+
+async function exportGIF() {
+  if (typeof GIF === 'undefined') throw new Error('gif.js not loaded — check your connection.');
+  const fps     = parseInt(document.getElementById('g-fps').value);
+  const quality = parseInt(document.getElementById('g-qual').value);
+  const s       = tS * duration, e = tE * duration, clipDur = e - s;
+  const total   = Math.max(1, Math.floor(clipDur * fps));
+  const delay   = Math.round(1000 / fps);
+  const gW      = Math.round(Math.min(cv.width, 960));
+  const gH      = Math.round(cv.height * (gW / cv.width));
+  const gif = new GIF({ workers:2, quality, width:gW, height:gH, workerScript:'https://unpkg.com/gif.js@0.2.0/dist/gif.worker.js' });
+  const fc  = document.createElement('canvas');
+  fc.width  = gW; fc.height = gH;
+  const fctx = fc.getContext('2d');
+  return new Promise(async (resolve, reject) => {
+    gif.on('finished', b => { dlBlob(b, 'orbit-'+ts()+'.gif'); resolve(); });
+    gif.on('progress',  p => { encBar.style.width = (50 + p*50).toFixed(1)+'%'; });
+    gif.on('error', reject);
+    for (let i = 0; i < total; i++) {
+      encBar.style.width = ((i/total)*50).toFixed(1) + '%';
+      await seekTo(rv, s + (i/fps));
+      fctx.drawImage(rv, 0, 0, gW, gH);
+      gif.addFrame(fc, { copy:true, delay });
+    }
+    gif.render();
+  });
+}
+
+/* =========================================================
+   RESET
+   ========================================================= */
+function resetAll() {
+  if (state === 'recording') { stopRec(); return; }
+  if (state === 'encoding' || state === 'starting') return;
+  state = 'idle';
+  if (rv.src) { URL.revokeObjectURL(rv.src); rv.src = ''; }
+  blob = null; chunks = []; duration = 0;
+  timelineEl.classList.remove('on');
+  idleOv.classList.remove('gone');
+  btnReset.style.display = 'none';
+  btnExp.style.display   = 'none';
+  encBar.style.width     = '0%';
+  thumbs.innerHTML       = '';
+  resBadge.style.display = 'none';
+  gifWarn.style.display  = 'none';
+  btnExp.classList.add('export');
+  btnExp.classList.remove('warn-export');
+  setTimerMs(0);
+  resetTrim();
+  updateSizeUI();
+  drawGrid();
+  setStatus('ready', 'Ready');
+}
+
+/* =========================================================
+   UTILS
+   ========================================================= */
+function getBestMime() {
+  const list = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  for (const m of list) if (MediaRecorder.isTypeSupported(m)) return m;
+  return null;
+}
+function dlBlob(b, name) {
+  const url = URL.createObjectURL(b);
+  const a   = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 6000);
+}
+function ts() { return Date.now(); }
+
+let toastTimer = null;
+function toast(msg, dur=3000) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), dur);
+}
+
+/* =========================================================
+   STARFIELD
+   ========================================================= */
+function startStarfield() {
+  const sc   = document.getElementById('sf');
+  const sctx = sc.getContext('2d');
+  function resize() { sc.width = window.innerWidth; sc.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  const stars = Array.from({length:140}, () => ({
+    x:Math.random(), y:Math.random(),
+    r:Math.random()*1.1+0.15,
+    a:Math.random()*0.55+0.08,
+    sp:Math.random()*0.004+0.001,
+    ph:Math.random()*Math.PI*2
+  }));
+  let tick = 0;
+  (function loop() {
+    sctx.clearRect(0,0,sc.width,sc.height);
+    tick += 0.008;
+    stars.forEach(s => {
+      const a = s.a*(.45+.55*Math.sin(tick*s.sp*200+s.ph));
+      sctx.beginPath();
+      sctx.arc(s.x*sc.width, s.y*sc.height, s.r, 0, Math.PI*2);
+      sctx.fillStyle = `rgba(175,185,215,${a.toFixed(3)})`;
+      sctx.fill();
+    });
+    requestAnimationFrame(loop);
+  })();
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+init();
+</script>
+</body>
+</html>
