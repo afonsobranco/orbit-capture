@@ -783,25 +783,27 @@ function stopRec() {
 }
 
 function onRecStop() {
-  blob     = new Blob(chunks, { type:'video/webm' });
-  duration = (Date.now() - startAt) / 1000;
-  state    = 'review';
+  blob = new Blob(chunks, { type:'video/webm' });
+  const wallClock = (Date.now() - startAt) / 1000;
+  state = 'review';
   setStatus('ready', 'Ready to export');
 
   rv.src = URL.createObjectURL(blob);
   rv.load();
   rv.addEventListener('loadeddata', () => {
+    // Use actual file duration — wall clock is always slightly longer than the
+    // encoded video, which causes exportWebM to hang if we use the wall clock.
+    duration = (isFinite(rv.duration) && rv.duration > 0.1) ? rv.duration : wallClock;
     buildThumbs();
     seekAndDraw(rv, 0);
+    setTimerMs(duration * 1000);
+    resetTrim();
+    timelineEl.classList.add('on');
+    btnReset.style.display = '';
+    btnExp.style.display   = '';
+    updateSizeUI();
+    checkGifWarning();
   }, { once:true });
-
-  setTimerMs(duration * 1000);
-  resetTrim();
-  timelineEl.classList.add('on');
-  btnReset.style.display = '';
-  btnExp.style.display   = '';
-  updateSizeUI();
-  checkGifWarning();
 }
 
 /* =========================================================
@@ -983,26 +985,42 @@ async function doExport() {
 
 async function exportWebM() {
   return new Promise((resolve, reject) => {
-    const s = tS * duration, e = tE * duration, clipDur = e - s;
+    // Clamp end point to actual video duration — wall-clock duration is always
+    // slightly longer than the encoded file, which was causing an infinite loop.
+    const vDur    = (isFinite(rv.duration) && rv.duration > 0) ? rv.duration : duration;
+    const s       = tS * duration;
+    const e       = Math.min(tE * duration, vDur - 0.05);
+    const clipDur = Math.max(e - s, 0.1);
+
     const ec = document.createElement('canvas');
     ec.width = cv.width; ec.height = cv.height;
     const ectx = ec.getContext('2d');
     const mime = getBestMime();
     const rec  = new MediaRecorder(ec.captureStream(30), mime ? { mimeType:mime } : {});
     const out  = [];
+
+    const finish = () => {
+      rv.pause();
+      if (rec.state !== 'inactive') rec.stop();
+      encBar.style.width = '100%';
+    };
+
     rec.ondataavailable = ev => { if (ev.data.size > 0) out.push(ev.data); };
     rec.onstop = () => { dlBlob(new Blob(out,{type:'video/webm'}), 'orbit-'+ts()+'.webm'); resolve(); };
     rec.onerror = reject;
     rec.start(100);
+
     seekTo(rv, s).then(() => {
-      rv.play().catch(reject);
       function frame() {
-        if (rv.currentTime >= e - 0.04) { rv.pause(); rec.stop(); encBar.style.width='100%'; return; }
+        if (rv.currentTime >= e || rv.ended || rv.paused) { finish(); return; }
         ectx.drawImage(rv, 0, 0, ec.width, ec.height);
         encBar.style.width = Math.min(((rv.currentTime-s)/clipDur)*100, 99).toFixed(1) + '%';
         requestAnimationFrame(frame);
       }
+      // Add listeners BEFORE play() to avoid race condition
       rv.addEventListener('playing', frame, { once:true });
+      rv.addEventListener('ended', finish, { once:true });
+      rv.play().catch(reject);
     }).catch(reject);
   });
 }
@@ -1011,7 +1029,10 @@ async function exportGIF() {
   if (typeof GIF === 'undefined') throw new Error('gif.js not loaded — check your connection.');
   const fps     = parseInt(document.getElementById('g-fps').value);
   const quality = parseInt(document.getElementById('g-qual').value);
-  const s       = tS * duration, e = tE * duration, clipDur = e - s;
+  const vDur    = (isFinite(rv.duration) && rv.duration > 0) ? rv.duration : duration;
+  const s       = tS * duration;
+  const e       = Math.min(tE * duration, vDur - 0.05);
+  const clipDur = Math.max(e - s, 0.1);
   const total   = Math.max(1, Math.floor(clipDur * fps));
   const delay   = Math.round(1000 / fps);
   const gW      = Math.round(Math.min(cv.width, 960));
@@ -1026,7 +1047,9 @@ async function exportGIF() {
     gif.on('error', reject);
     for (let i = 0; i < total; i++) {
       encBar.style.width = ((i/total)*50).toFixed(1) + '%';
-      await seekTo(rv, s + (i/fps));
+      // Clamp to actual video duration to avoid seeked event never firing
+      const seekT = Math.min(s + (i / fps), vDur - 0.05);
+      await seekTo(rv, seekT);
       fctx.drawImage(rv, 0, 0, gW, gH);
       gif.addFrame(fc, { copy:true, delay });
     }
